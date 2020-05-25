@@ -5,9 +5,11 @@ using EventsDispatcher.Interfaces;
 using EventsDispatcher.Models.Abstract;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using RabbitMQ.Client;
 
-namespace EventsDispatcher {
-    public class EventBusDispatcher : IAsyncEventDispatcher
+namespace EventsDispatcher
+{
+    public class EventBusDispatcher : IEventBusDispatcher
     {
         private readonly IRabbitConfigurationProvider rabbitConfigurationProvider;
         private readonly IRabbitConnection rabbitConnection;
@@ -24,45 +26,78 @@ namespace EventsDispatcher {
             this.rabbitConnection = rabbitConnection;
         }
 
-        public async Task PublishAsync<TEvent>(TEvent @event)
+        public void Publish(string message, string queue, string routingKey)
+        {
+            if (string.IsNullOrEmpty(message))
+                throw new ArgumentNullException(nameof(message));
+
+            using (var channel = rabbitConnection.GetChannel())
+            {
+                channel.QueueDeclare(queue: queue,
+                                     durable: false,
+                                     exclusive: false,
+                                     autoDelete: false,
+                                     arguments: null);
+
+                var body = Encoding.UTF8.GetBytes(message);
+
+                channel.BasicPublish(exchange: "",
+                                     routingKey: routingKey,
+                                     basicProperties: null,
+                                     body: body);
+            }
+        }
+
+        public void Publish<TEvent>(TEvent @event)
             where TEvent : EventBase
         {
-            if (!rabbitConfigurationProvider.IsEnabled())
-            {
-                logger.LogInformation("RabbitMQ integration disabled");
-                return;
-            }
-
             if (@event == null)
                 throw new ArgumentNullException(nameof(@event));
 
             var exchangeCfg = rabbitConfigurationProvider.GetExchangeConfig();
 
-            await Task.Run(() =>
+            var exchange = GetExchangeName<TEvent>();
+            var channel = rabbitConnection.GetChannel();
+
+            channel.ExchangeDeclare(exchange, "direct", durable: false, autoDelete: false, arguments: null);
+
+            var body = SerializeEvent(@event);
+
+            var expiration = @event.Expiration ?? exchangeCfg?.DefaultMessageExpiration;
+            var basicProperties = expiration is null ? null : channel.CreateBasicProperties();
+            if (basicProperties != null)
+                basicProperties.Expiration = expiration.Value.ToString();
+
+            channel.BasicPublish(exchange: exchange,
+                                 routingKey: @event.RoutingKey,
+                                 basicProperties: basicProperties,
+                                 mandatory: false,
+                                 body: body);
+        }
+
+        public Task PublishAsync(string message, string queue, string routingKey)
+        {
+            return Task.Run(() =>
             {
                 try
                 {
-                    var exchangePrefix = string.IsNullOrEmpty(exchangeCfg.NamePrefix) ? "" : $"{exchangeCfg.NamePrefix}_";
-                    var exchange = $"{exchangePrefix}{GetExchangeName<TEvent>()}";
-                    var channel = rabbitConnection.GetChannel();
+                    Publish(message, queue, routingKey);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Error occures during event publishing", ex);
+                }
+            });
+        }
 
-                    channel.ExchangeDeclare(exchange, "direct", durable: false, autoDelete: false, arguments: null);
-
-                    var body = SerializeEvent(@event);
-
-                    var expiration = @event.Expiration ?? exchangeCfg?.DefaultMessageExpiration;
-                    var basicProperties = expiration is null ? null : channel.CreateBasicProperties();
-                    if (basicProperties != null)
-                        basicProperties.Expiration = expiration.Value.ToString();
-
-                    channel.BasicPublish(exchange: exchange,
-                                         routingKey: @event.Severity,
-                                         basicProperties: basicProperties,
-                                         mandatory: false,
-                                         body: body);
-
-
-                    logger.LogInformation($"Event successfully published to exchange {exchange}");
+        public Task PublishAsync<TEvent>(TEvent @event)
+            where TEvent : EventBase
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    Publish<TEvent>(@event);
                 }
                 catch (Exception ex)
                 {
@@ -75,7 +110,7 @@ namespace EventsDispatcher {
             Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(@object));
 
         private TEvent DeserializeEvent<TEvent>(byte[] bytes)
-            where TEvent : EventBase => 
+            where TEvent : EventBase =>
             JsonConvert.DeserializeObject<TEvent>(Encoding.UTF8.GetString(bytes));
 
         private static string GetExchangeName(EventBase @event) => @event.GetType().FullName;

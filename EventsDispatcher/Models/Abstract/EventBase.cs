@@ -5,7 +5,7 @@ namespace EventsDispatcher.Models.Abstract
     public abstract class EventBase
     {
         [JsonIgnore]
-        public string Severity { get; protected set; }
+        public string RoutingKey { get; protected set; }
         [JsonIgnore]
         public long? Expiration { get; protected set; }
 
@@ -13,13 +13,13 @@ namespace EventsDispatcher.Models.Abstract
 
         protected EventBase(string severity)
         {
-            Severity = severity;
+            RoutingKey = severity;
             Expiration = null;
         }
 
         protected EventBase(string severity, long expiration)
         {
-            Severity = severity;
+            RoutingKey = severity;
             Expiration = expiration;
         }
     }
