@@ -1,14 +1,14 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <UserSecretsId>dotnet-ProducerWorker-41753F93-B3EE-43E6-B73D-E18D6645DD69</UserSecretsId>
+  </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\EventsDispatcher\EventsDispatcher.csproj" />
   </ItemGroup>
-
-  <PropertyGroup>
-    <OutputType>Exe</OutputType>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
-  </PropertyGroup>
-
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.1.4" />
@@ -18,9 +18,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="appsettings.json">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.4" />
   </ItemGroup>
-
 </Project>

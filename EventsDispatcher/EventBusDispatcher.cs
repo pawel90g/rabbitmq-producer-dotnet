@@ -26,7 +26,7 @@ namespace EventsDispatcher
             this.rabbitConnection = rabbitConnection;
         }
 
-        public void Publish(string message, string queue, string routingKey)
+        public void Publish(string message, string queue)
         {
             if (string.IsNullOrEmpty(message))
                 throw new ArgumentNullException(nameof(message));
@@ -42,7 +42,7 @@ namespace EventsDispatcher
                 var body = Encoding.UTF8.GetBytes(message);
 
                 channel.BasicPublish(exchange: "",
-                                     routingKey: routingKey,
+                                     routingKey: queue,
                                      basicProperties: null,
                                      body: body);
             }
@@ -75,13 +75,13 @@ namespace EventsDispatcher
                                  body: body);
         }
 
-        public Task PublishAsync(string message, string queue, string routingKey)
+        public Task PublishAsync(string message, string queue)
         {
             return Task.Run(() =>
             {
                 try
                 {
-                    Publish(message, queue, routingKey);
+                    Publish(message, queue);
                 }
                 catch (Exception ex)
                 {

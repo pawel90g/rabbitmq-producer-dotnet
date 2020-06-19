@@ -1,0 +1,42 @@
+@model PublishMessageViewModel
+@{
+    ViewBag.Title = "Scenario 1";
+}
+
+<form asp-action="Publish" asp-controller="Home" asp-antiforgery="true" class="validate">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="row">
+        <div class="col-4">
+            <label>Queue name</label>
+        </div>
+        <div class="col-8">    
+            <input asp-for="Queue" class="form-control"/>
+            <span asp-validation-for="Queue" class="text-danger"></span>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-4">
+            <label>Routing Key</label>
+        </div>
+        <div class="col-8">    
+            <input asp-for="RoutingKey" class="form-control"/>
+            <span asp-validation-for="RoutingKey" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-4">
+            <label>Message</label>
+        </div>
+        <div class="col-8">    
+            <textarea asp-for="Message" class="form-control" rows="2"></textarea>
+            <span asp-validation-for="Message" class="text-danger"></span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-4">    
+            <button type="submit" class="btn btn-primary">Publish</button>
+        </div>
+    </div>
+</form>

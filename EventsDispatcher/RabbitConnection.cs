@@ -15,10 +15,7 @@ namespace EventsDispatcher
             this.rabbitConfigurationProvider = rabbitConfigurationProvider;
         }
 
-        public void Close()
-        {
-            connection.Close();
-        }
+        public void Close() => connection.Close();
 
         public void Dispose()
         {
@@ -28,10 +25,7 @@ namespace EventsDispatcher
             connection.Dispose();
         }
 
-        public IModel GetChannel()
-        {
-            return model ?? (model = GetConnection().CreateModel());
-        }
+        public IModel GetChannel() => GetConnection().CreateModel();
 
         public IConnection GetConnection()
         {
