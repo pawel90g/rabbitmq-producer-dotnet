@@ -26,7 +26,7 @@ namespace EventsDispatcher
             this.rabbitConnection = rabbitConnection;
         }
 
-        public void Publish(string message, string queue)
+        public void QueuePublish(string message, string queue)
         {
             if (string.IsNullOrEmpty(message))
                 throw new ArgumentNullException(nameof(message));
@@ -48,7 +48,36 @@ namespace EventsDispatcher
             }
         }
 
-        public void Publish<TEvent>(TEvent @event)
+        public void ExchangePublish(string message, string exchange, string routingKey, string exchangeType = ExchangeType.Direct)
+        {
+            if (string.IsNullOrEmpty(message))
+                throw new ArgumentNullException(nameof(message));
+            if (string.IsNullOrEmpty(exchange))
+                throw new ArgumentNullException(nameof(exchange));
+            if (string.IsNullOrEmpty(routingKey))
+                throw new ArgumentNullException(nameof(routingKey));
+
+            var exchangeCfg = rabbitConfigurationProvider.GetExchangeConfig();
+
+            var channel = rabbitConnection.GetChannel();
+
+            channel.ExchangeDeclare(exchange, exchangeType, durable: false, autoDelete: false, arguments: null);
+
+            var body = Encoding.UTF8.GetBytes(message);
+
+            var expiration = exchangeCfg?.DefaultMessageExpiration;
+            var basicProperties = expiration is null ? null : channel.CreateBasicProperties();
+            if (basicProperties != null)
+                basicProperties.Expiration = expiration.Value.ToString();
+
+            channel.BasicPublish(exchange: exchange,
+                                 routingKey: routingKey,
+                                 basicProperties: basicProperties,
+                                 mandatory: false,
+                                 body: body);
+        }
+
+        public void ExchangePublish<TEvent>(TEvent @event, string exchangeType = ExchangeType.Direct)
             where TEvent : EventBase
         {
             if (@event == null)
@@ -56,10 +85,10 @@ namespace EventsDispatcher
 
             var exchangeCfg = rabbitConfigurationProvider.GetExchangeConfig();
 
-            var exchange = GetExchangeName<TEvent>();
+            var exchange = GetExchangeNameFromEvent<TEvent>();
             var channel = rabbitConnection.GetChannel();
 
-            channel.ExchangeDeclare(exchange, "direct", durable: false, autoDelete: false, arguments: null);
+            channel.ExchangeDeclare(exchange, exchangeType, durable: false, autoDelete: false, arguments: null);
 
             var body = SerializeEvent(@event);
 
@@ -75,13 +104,13 @@ namespace EventsDispatcher
                                  body: body);
         }
 
-        public Task PublishAsync(string message, string queue)
+        public Task QueuePublishAsync(string message, string queue)
         {
             return Task.Run(() =>
             {
                 try
                 {
-                    Publish(message, queue);
+                    QueuePublish(message, queue);
                 }
                 catch (Exception ex)
                 {
@@ -90,14 +119,29 @@ namespace EventsDispatcher
             });
         }
 
-        public Task PublishAsync<TEvent>(TEvent @event)
+        public Task ExchangePublishAsync(string message, string exchange, string routingKey, string exchangeType = ExchangeType.Direct)
+        {
+            return Task.Run(() =>
+            {
+                try
+                {
+                    ExchangePublish(message, exchange, routingKey, exchangeType);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError("Error occures during event publishing", ex);
+                }
+            });
+        }
+
+        public Task ExchangePublishAsync<TEvent>(TEvent @event, string exchangeType = ExchangeType.Direct)
             where TEvent : EventBase
         {
             return Task.Run(() =>
             {
                 try
                 {
-                    Publish<TEvent>(@event);
+                    ExchangePublish<TEvent>(@event, exchangeType);
                 }
                 catch (Exception ex)
                 {
@@ -114,6 +158,6 @@ namespace EventsDispatcher
             JsonConvert.DeserializeObject<TEvent>(Encoding.UTF8.GetString(bytes));
 
         private static string GetExchangeName(EventBase @event) => @event.GetType().FullName;
-        private static string GetExchangeName<TEvent>() where TEvent : EventBase => typeof(TEvent).FullName;
+        private static string GetExchangeNameFromEvent<TEvent>() where TEvent : EventBase => typeof(TEvent).FullName;
     }
 }

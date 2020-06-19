@@ -24,7 +24,7 @@ namespace WebProducer.Controllers
             if (!ModelState.IsValid)
                 return View("Index", request);
 
-            await eventBusDispatcher.PublishAsync(request.Message, request.Queue);
+            await eventBusDispatcher.QueuePublishAsync(request.Message, request.Queue);
             return View("Index", request);
         }
     }

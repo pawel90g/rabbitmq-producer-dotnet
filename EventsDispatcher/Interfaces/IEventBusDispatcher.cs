@@ -1,16 +1,21 @@
 using System.Threading.Tasks;
 using EventsDispatcher.Models.Abstract;
+using EventsDispatcher.Models.Enums;
 
 namespace EventsDispatcher.Interfaces
 {
     public interface IEventBusDispatcher
     {
-        void Publish(string message, string queue);
-        void Publish<TEvent>(TEvent @event)
+        void QueuePublish(string message, string queue);
+
+        void ExchangePublish(string message, string exchange, string routingKey, string exchangeType = ExchangeType.Direct);
+        void ExchangePublish<TEvent>(TEvent @event, string exchangeType = ExchangeType.Direct)
             where TEvent : EventBase;
 
-        Task PublishAsync(string message, string queue);
-        Task PublishAsync<TEvent>(TEvent @event)
+        Task QueuePublishAsync(string message, string queue);
+
+        Task ExchangePublishAsync(string message, string exchange, string routingKey, string exchangeType = ExchangeType.Direct);
+        Task ExchangePublishAsync<TEvent>(TEvent @event, string exchangeType = ExchangeType.Direct)
             where TEvent : EventBase;
     }
 }

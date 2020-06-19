@@ -1,4 +1,5 @@
 using EventsDispatcher.IoC;
+using EventsDispatcher.Models.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using ProducerWorker.Services;
@@ -19,17 +20,31 @@ namespace ProducerWorker
                 .ConfigureServices((hostContext, services) =>
                 {
                     var argsList = args.ToList();
+                    var queueName = argsList.FirstOrDefault(a => a.StartsWith("queue"))?.Split("=").ElementAtOrDefault(1);
+
+                    var exchangeName = argsList.FirstOrDefault(a => a.StartsWith("exchange"))?.Split("=").ElementAtOrDefault(1);
+                    var exchangeType = ExchangeType.Parse(argsList.FirstOrDefault(a => a.StartsWith("exchange"))?.Split("=").ElementAtOrDefault(1));
+                    var routingKey = ExchangeType.Parse(argsList.FirstOrDefault(a => a.StartsWith("routingKey"))?.Split("=").ElementAtOrDefault(1));
+
                     var productionIntervalStr = argsList.FirstOrDefault(a => a.StartsWith("interval"))?.Split("=").ElementAtOrDefault(1);
                     var isValidInterval = int.TryParse(productionIntervalStr, out var productionInterval);
-                    var queueName = argsList.FirstOrDefault(a => a.StartsWith("queue"))?.Split("=").ElementAtOrDefault(1);
                     var workerName = argsList.FirstOrDefault(a => a.StartsWith("worker"))?.Split("=").ElementAtOrDefault(1) ?? "Noname";
 
-                    services.AddSingleton<IProducerWorkerConfigProvider>(
-                        new ProducerWorkerConfigProvider(queueName, 
-                        string.IsNullOrEmpty(productionIntervalStr) && isValidInterval
-                        ? default 
-                        : productionInterval,
-                        workerName));
+                    var cfgProvider = string.IsNullOrEmpty(exchangeName) || string.IsNullOrEmpty(routingKey)
+                        ? new ProducerWorkerConfigProvider(queueName, 
+                            string.IsNullOrEmpty(productionIntervalStr) && isValidInterval
+                            ? default 
+                            : productionInterval,
+                            workerName)
+                        : new ProducerWorkerConfigProvider(exchangeName, 
+                            exchangeType,
+                            routingKey,
+                            string.IsNullOrEmpty(productionIntervalStr) && isValidInterval
+                            ? default 
+                            : productionInterval,
+                            workerName);
+
+                    services.AddSingleton<IProducerWorkerConfigProvider>(cfgProvider);
 
                     services.RegisterEventsDispatcher(hostContext.Configuration);
                     services.AddHostedService<ProducerServiceWorker>();

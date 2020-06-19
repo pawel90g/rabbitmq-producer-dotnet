@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using EventsDispatcher.Interfaces;
@@ -15,7 +16,7 @@ namespace ProducerWorker
 
         public ProducerServiceWorker(
             ILogger<ProducerServiceWorker> logger,
-            IEventBusDispatcher eventBusDispatcher, 
+            IEventBusDispatcher eventBusDispatcher,
             IProducerWorkerConfigProvider producerWorkerConfigProvider)
         {
             _logger = logger;
@@ -25,10 +26,25 @@ namespace ProducerWorker
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            if (producerWorkerConfigProvider.UseExchange())
+                Console.WriteLine($"Publishing on exchange '{producerWorkerConfigProvider.GetExchangeName()}' using routing '{producerWorkerConfigProvider.GetRoutingKey()}. Exchange type: {producerWorkerConfigProvider.GetExchangeType()}'");
+            else
+                Console.WriteLine($"Publishing on queue '{producerWorkerConfigProvider.GetQueueName()}'");
+
             var i = 0;
             while (!stoppingToken.IsCancellationRequested)
             {
-                await eventBusDispatcher.PublishAsync($"[Worker {producerWorkerConfigProvider.GetWorkerName()}] Message {++i}", producerWorkerConfigProvider.GetQueueName());
+                if (producerWorkerConfigProvider.UseExchange())
+                    await eventBusDispatcher.ExchangePublishAsync(
+                        $"[Worker {producerWorkerConfigProvider.GetWorkerName()}] Message {++i}",
+                        producerWorkerConfigProvider.GetExchangeName(),
+                        producerWorkerConfigProvider.GetRoutingKey(),
+                        producerWorkerConfigProvider.GetExchangeType());
+                else
+                    await eventBusDispatcher.QueuePublishAsync(
+                        $"[Worker {producerWorkerConfigProvider.GetWorkerName()}] Message {++i}",
+                        producerWorkerConfigProvider.GetQueueName());
+
                 await Task.Delay(producerWorkerConfigProvider.GetProductionInterval(), stoppingToken);
             }
         }
