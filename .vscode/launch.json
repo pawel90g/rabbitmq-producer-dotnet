@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/ProducerWorker/bin/Debug/netcoreapp3.1/ProducerWorker.dll",
-            "args": ["queue=queue1", "interval=500", "worker=VSCode"],
+            "args": ["exchange=exchange1", "routingKey=rk1", "type=direct", "interval=2500", "worker=VSCode"],
             "cwd": "${workspaceFolder}/ProducerWorker",
             "stopAtEntry": false,
             "console": "internalConsole"

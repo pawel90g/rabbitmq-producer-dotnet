@@ -27,7 +27,7 @@ namespace ProducerWorker
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
             if (producerWorkerConfigProvider.UseExchange())
-                Console.WriteLine($"Publishing on exchange '{producerWorkerConfigProvider.GetExchangeName()}' using routing '{producerWorkerConfigProvider.GetRoutingKey()}. Exchange type: {producerWorkerConfigProvider.GetExchangeType()}'");
+                Console.WriteLine($"Publishing on exchange '{producerWorkerConfigProvider.GetExchangeName()}' using routing '{producerWorkerConfigProvider.GetRoutingKey()}'. Exchange type: '{producerWorkerConfigProvider.GetExchangeType()}'");
             else
                 Console.WriteLine($"Publishing on queue '{producerWorkerConfigProvider.GetQueueName()}'");
 

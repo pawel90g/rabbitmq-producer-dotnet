@@ -23,8 +23,8 @@ namespace ProducerWorker
                     var queueName = argsList.FirstOrDefault(a => a.StartsWith("queue"))?.Split("=").ElementAtOrDefault(1);
 
                     var exchangeName = argsList.FirstOrDefault(a => a.StartsWith("exchange"))?.Split("=").ElementAtOrDefault(1);
-                    var exchangeType = ExchangeType.Parse(argsList.FirstOrDefault(a => a.StartsWith("exchange"))?.Split("=").ElementAtOrDefault(1));
-                    var routingKey = ExchangeType.Parse(argsList.FirstOrDefault(a => a.StartsWith("routingKey"))?.Split("=").ElementAtOrDefault(1));
+                    var exchangeType = ExchangeType.Parse(argsList.FirstOrDefault(a => a.StartsWith("type"))?.Split("=").ElementAtOrDefault(1));
+                    var routingKey = argsList.FirstOrDefault(a => a.StartsWith("routingKey"))?.Split("=").ElementAtOrDefault(1);
 
                     var productionIntervalStr = argsList.FirstOrDefault(a => a.StartsWith("interval"))?.Split("=").ElementAtOrDefault(1);
                     var isValidInterval = int.TryParse(productionIntervalStr, out var productionInterval);
